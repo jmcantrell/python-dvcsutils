@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import os, shutil, unittest
-import vcsutils
+import dvcsutils
 
 
 def resource(name):
@@ -19,8 +19,8 @@ class MainTestCase(unittest.TestCase):
             shutil.rmtree(self.directory)
         self.repos = []
         os.makedirs(self.directory)
-        for t, cls in vcsutils.vcs_types.items():
-            r = vcsutils.vcs_types[t](directory=os.path.join(self.directory, t))
+        for t, cls in dvcsutils.dvcs_types.items():
+            r = dvcsutils.dvcs_types[t](directory=os.path.join(self.directory, t))
             self.repos.append(r)
             r.init()
 

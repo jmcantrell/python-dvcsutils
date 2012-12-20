@@ -1,6 +1,6 @@
 import os
 from pipes import quote
-from .core import actions, vcs_types
+from .core import actions, dvcs_types
 from .utils import cd, in_directory, lines, get, run, AutoRegister
 
 
@@ -13,14 +13,13 @@ class Repo:  # {{{1
 
     __metaclass__ = AutoRegister
 
-    vcs_type = None
-    actions = {}
+    dvcs_type = None
 
     def __init__(self, directory=None):
         self.directory = directory or os.getcwd()
 
     def command(self, cmd):
-        return ' '.join([self.vcs_type, cmd])
+        return ' '.join([self.dvcs_type, cmd])
 
     def lines(self, cmd, **kwargs):
         with cd(self.directory):
@@ -38,13 +37,13 @@ class Repo:  # {{{1
 
     @classmethod
     def detect(cls, directory):
-        if not cls.vcs_type:
+        if not cls.dvcs_type:
             return False
-        return os.path.isdir(os.path.join(directory, '.'+cls.vcs_type))
+        return os.path.isdir(os.path.join(directory, '.'+cls.dvcs_type))
 
     @classmethod
     def register_subclass(klass, cls):
-        vcs_types[cls.vcs_type] = cls
+        dvcs_types[cls.dvcs_type] = cls
 
     @in_directory
     def get_url(self):
@@ -55,7 +54,7 @@ class Repo:  # {{{1
         return NotImplementedError
 
     def get_origin(self):
-        return '+'.join([self.vcs_type, self.get_url()])
+        return '+'.join([self.dvcs_type, self.get_url()])
 
     # Internal actions {{{2
     # Any new Repo class should override these
@@ -70,6 +69,12 @@ class Repo:  # {{{1
         raise NotImplementedError
 
     def _clone(self, url):
+        raise NotImplementedError
+
+    def _add(self, *files):
+        raise NotImplementedError
+
+    def _diff(self):
         raise NotImplementedError
 
     def _pull(self):
@@ -107,7 +112,7 @@ class Repo:  # {{{1
 
     @action
     def actions(self):
-        for name in sorted(Repo.actions.keys()):
+        for name in sorted(actions.keys()):
             print(name)
 
     @action
@@ -129,6 +134,16 @@ class Repo:  # {{{1
     @action
     def latest(self):
         print(self.get_latest())
+
+    @action
+    @in_directory
+    def add(self, *files):
+        return self._add(*files)
+
+    @action
+    @in_directory
+    def diff(self):
+        return self._diff()
 
     @action
     @in_directory
@@ -183,7 +198,7 @@ class Repo:  # {{{1
 
 class RepoGit(Repo):  # {{{1
 
-    vcs_type = 'git'
+    dvcs_type = 'git'
 
     def _url(self):
         return self.get('config remote.origin.url')
@@ -199,6 +214,12 @@ class RepoGit(Repo):  # {{{1
 
     def _status(self):
         return self.run('status')
+
+    def _add(self, *files):
+        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+
+    def _diff(self):
+        return self.run('diff')
 
     def _pull(self):
         return self.run('pull --recurse-submodules')
@@ -238,7 +259,7 @@ class RepoGit(Repo):  # {{{1
 
 class RepoMercurial(Repo):  # {{{1
 
-    vcs_type = 'hg'
+    dvcs_type = 'hg'
 
     def _url(self):
         return self.get('paths default')
@@ -254,6 +275,12 @@ class RepoMercurial(Repo):  # {{{1
 
     def _status(self):
         return self.run('status')
+
+    def _add(self, *files):
+        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+
+    def _diff(self):
+        return self.run('diff')
 
     def _pull(self):
         return self.run('pull -u')
@@ -293,7 +320,7 @@ class RepoMercurial(Repo):  # {{{1
 
 class RepoBazaar(Repo):  # {{{1
 
-    vcs_type = 'bzr'
+    dvcs_type = 'bzr'
 
     def get_info(self, key):
         for line in self.lines('info'):
@@ -310,10 +337,74 @@ class RepoBazaar(Repo):  # {{{1
         return self.run('init {}'.format(quote(self.directory)))
 
     def _clone(self, url):
-        return self.run('branch {} {}'.format(quote(url), quote(self.directory)))
+        return self.run('checkout {} {}'.format(quote(url), quote(self.directory)))
+
+    def _add(self, *files):
+        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+
+    def _diff(self):
+        return self.run('diff')
+
+    def _pull(self):
+        return self.run('pull')
 
     def _status(self):
         return self.run('status')
+
+    def _commit(self, message=None):
+        if message:
+            return self.run('commit -m '+quote(message))
+        else:
+            return self.run('commit')
+
+    def _check(self):
+        return self.run('check -v')
+
+    def _clean(self):
+        return self.run('clean-tree -v --force --detritus --unknown')
+
+    def _purge(self):
+        return self.run('clean-tree -v --force --detritus --unknown --ignored')
+
+    def _reset(self):
+        return self.run('revert -v')
+
+    def _export(self, directory):
+        return self.run('export -v --root={}'.format(quote(self.name)))
+
+    def _archive(self, directory):
+        return self.run('export -v --root={} {}.zip'.format(quote(self.name), quote(self.name)))
+
+
+class RepoDarcs(Repo):  # {{{1
+
+    dvcs_type = 'darcs'
+
+    def get_info(self, key):
+        for line in self.lines('info'):
+            if key+': ' in line:
+                return line.split(': ')[1]
+
+    def _url(self):
+        return self.get_info('parent branch')
+
+    def _latest(self):
+        return self.get('id -i')
+
+    def _init(self):
+        return self.run('init {}'.format(quote(self.directory)))
+
+    def _clone(self, url):
+        return self.run('get {} {}'.format(quote(url), quote(self.directory)))
+
+    def _add(self, *files):
+        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+
+    def _diff(self):
+        return self.run('diff')
+
+    def _status(self):
+        return self.run('whatsnew -s')
 
     def _commit(self, message=None):
         if message:

@@ -1,11 +1,11 @@
 import os, sys, argparse
-from .core import load, detect, find, root
+from .core import actions, load, detect, find, root
 from .repo import Repo
 
 
 def get_arguments():
-    parser = argparse.ArgumentParser(description='Abstract VCS interface.')
-    parser.add_argument('actions', nargs='*', choices=Repo.get_actions(), help='action(s) to perform')
+    parser = argparse.ArgumentParser(description='Abstract DVCS interface.')
+    parser.add_argument('actions', nargs='*', metavar='ACTION', choices=actions.keys(), help='action(s) to perform')
     parser.add_argument('-D', '--directory', help='the working directory')
     parser.add_argument('-d', '--output-directory', help='the output directory')
     parser.add_argument('-m', '--message', help='the commit message')

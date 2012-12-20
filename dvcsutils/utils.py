@@ -28,6 +28,7 @@ def in_directory(f, directory=None):
         d = directory or kwargs.get('directory') or vars(self).get('directory')
         with cd(d or os.getcwd()):
             return f(self, *args, **kwargs)
+    new_f.func_name = f.func_name
     return new_f
 
 

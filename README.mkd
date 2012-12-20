@@ -1,12 +1,12 @@
-VCSUtils is a package and a command line utility for working with any VCS in a
+DVCSUtils is a package and a command line utility for working with any DVCS in a
 uniform way.
 
 Installation
 ------------
 
-You should install ScriptUtils with pip:
+You should install DVCSUtils with pip:
 
-    pip install VCSUtils
+    pip install DVCSUtils
 
 Otherwise, you'll have to download the package and run:
 

@@ -3,9 +3,9 @@
 from setuptools import setup
 
 setup(
-        name='VCSUtils',
+        name='DVCSUtils',
         version='0.0.1',
-        description='Work with major VCS tools in the abstract.',
+        description='Work with major DVCS tools in the abstract.',
         author='Jeremy Cantrell',
         author_email='jmcantrell@gmail.com',
         classifiers=[
@@ -22,10 +22,10 @@ setup(
             ],
         entry_points={
             'console_scripts': [
-                'vcs=vcsutils.cli:main',
+                'dvcs=dvcsutils.cli:main',
                 ]
             },
         packages=[
-            'vcsutils',
+            'dvcsutils',
             ],
         )

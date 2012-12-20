@@ -1,4 +1,4 @@
-vcs_types = {}
+dvcs_types = {}
 actions = {}
 
 import os
@@ -6,17 +6,17 @@ from .repo import Repo
 
 
 def detect(directory):
-    for tclass in vcs_types.values():
+    for tclass in dvcs_types.values():
         if tclass.detect(directory):
             return tclass
 
 
-def load(directory, vcs_type=None):
+def load(directory, dvcs_type=None):
     repo_cls = detect(directory)
     if repo_cls:
         return repo_cls(directory=directory)
-    if vcs_type:
-        return vcs_types[vcs_type](directory=directory)
+    if dvcs_type:
+        return dvcs_types[dvcs_type](directory=directory)
 
 
 def find(directory):

@@ -1,0 +1,13 @@
+VCSUtils is a package and a command line utility for working with any VCS in a
+uniform way.
+
+Installation
+------------
+
+You should install ScriptUtils with pip:
+
+    pip install VCSUtils
+
+Otherwise, you'll have to download the package and run:
+
+    python setup.py install

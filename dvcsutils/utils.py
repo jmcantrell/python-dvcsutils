@@ -1,4 +1,5 @@
 import os, shlex
+from pipes import quote
 from contextlib import contextmanager
 from subprocess import PIPE, Popen
 
@@ -51,3 +52,7 @@ def get(cmd, **kwargs):
 def lines(cmd, **kwargs):
     kwargs['stdout'] = PIPE
     return run(cmd, **kwargs)[1].split(os.linesep)
+
+
+def quote(*args):
+    return ' '.join([quote(a) for a in args])

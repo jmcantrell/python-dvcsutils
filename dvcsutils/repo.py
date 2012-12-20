@@ -1,7 +1,6 @@
 import os
-from pipes import quote
 from .core import actions, dvcs_types
-from .utils import cd, in_directory, lines, get, run, AutoRegister
+from .utils import in_directory, quote, lines, get, run, AutoRegister
 
 
 def action(f):
@@ -22,8 +21,7 @@ class Repo:  # {{{1
         return ' '.join([self.dvcs_type, cmd])
 
     def lines(self, cmd, **kwargs):
-        with cd(self.directory):
-            return lines(self.command(cmd), **kwargs)
+        return lines(self.command(cmd), **kwargs)
 
     def get(self, cmd, **kwargs):
         return get(self.command(cmd), **kwargs)
@@ -57,7 +55,7 @@ class Repo:  # {{{1
         return '+'.join([self.dvcs_type, self.get_url()])
 
     # Internal actions {{{2
-    # Any new Repo class should override these
+    # Any Repo class should override these
 
     def _url(self):
         raise NotImplementedError
@@ -74,6 +72,12 @@ class Repo:  # {{{1
     def _add(self, *files):
         raise NotImplementedError
 
+    def _rm(self, *files):
+        raise NotImplementedError
+
+    def _mv(self, *files):
+        raise NotImplementedError
+
     def _diff(self):
         raise NotImplementedError
 
@@ -83,7 +87,7 @@ class Repo:  # {{{1
     def _push(self):
         raise NotImplementedError
 
-    def _commit(self, message):
+    def _commit(self, message=None):
         raise NotImplementedError
 
     def _status(self):
@@ -108,7 +112,8 @@ class Repo:  # {{{1
         raise NotImplementedError
 
     # External actions {{{2
-    # These are exposed to the CLI interface
+    # Intended to be the API
+    # Exposed to the CLI interface
 
     @action
     def actions(self):
@@ -142,6 +147,16 @@ class Repo:  # {{{1
 
     @action
     @in_directory
+    def rm(self, *files):
+        return self._rm(*files)
+
+    @action
+    @in_directory
+    def mv(self, *files):
+        return self._mv(*files)
+
+    @action
+    @in_directory
     def diff(self):
         return self._diff()
 
@@ -157,7 +172,7 @@ class Repo:  # {{{1
 
     @action
     @in_directory
-    def commit(self, message):
+    def commit(self, message=None):
         return self._commit(message)
 
     @action
@@ -210,16 +225,22 @@ class RepoGit(Repo):  # {{{1
         return self.run('init {}'.format(quote(self.directory)))
 
     def _clone(self, url):
-        return self.run('clone {} {}'.format(quote(url), quote(self.directory)))
+        return self.run('clone {}'.format(quote(url, self.directory)))
 
     def _status(self):
         return self.run('status')
 
     def _add(self, *files):
-        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+        return self.run('add {}'.format(quote(*files)))
 
     def _diff(self):
         return self.run('diff')
+
+    def _mv(self, *files):
+        return self.run('mv {}'.format(quote(*files)))
+
+    def _rm(self, *files):
+        return self.run('rm -f {}'.format(quote(*files)))
 
     def _pull(self):
         return self.run('pull --recurse-submodules')
@@ -229,7 +250,7 @@ class RepoGit(Repo):  # {{{1
 
     def _commit(self, message=None):
         if message:
-            return self.run('commit -a -v -m '+quote(message))
+            return self.run('commit -a -v -m {}'.format(quote(message)))
         else:
             return self.run('commit -a -v')
 
@@ -271,13 +292,19 @@ class RepoMercurial(Repo):  # {{{1
         return self.run('init {}'.format(quote(self.directory)))
 
     def _clone(self, url):
-        return self.run('clone {} {}'.format(quote(url), quote(self.directory)))
+        return self.run('clone {}'.format(quote(url, self.directory)))
 
     def _status(self):
         return self.run('status')
 
     def _add(self, *files):
-        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+        return self.run('add {}'.format(quote(*files)))
+
+    def _mv(self, *files):
+        return self.run('mv {}'.format(quote(*files)))
+
+    def _rm(self, *files):
+        return self.run('rm -f {}'.format(quote(*files)))
 
     def _diff(self):
         return self.run('diff')
@@ -290,7 +317,7 @@ class RepoMercurial(Repo):  # {{{1
 
     def _commit(self, message=None):
         if message:
-            return self.run('commit -v -m '+quote(message))
+            return self.run('commit -v -m {}'.format(quote(message)))
         else:
             return self.run('commit -v')
 
@@ -307,7 +334,7 @@ class RepoMercurial(Repo):  # {{{1
         return self.run('revert -a')
 
     def _export(self, directory):
-        return self.run('archive '+quote(directory))
+        return self.run('archive {}'.format(quote(directory)))
 
     def _archive(self, directory):
         return self.run(
@@ -337,80 +364,34 @@ class RepoBazaar(Repo):  # {{{1
         return self.run('init {}'.format(quote(self.directory)))
 
     def _clone(self, url):
-        return self.run('checkout {} {}'.format(quote(url), quote(self.directory)))
+        return self.run('checkout {}'.format(quote(url, self.directory)))
 
     def _add(self, *files):
-        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
+        return self.run('add {}'.format(quote(*files)))
+
+    def _mv(self, *files):
+        return self.run('mv {}'.format(quote(*files)))
+
+    def _rm(self, *files):
+        return self.run('remove --force {}'.format(quote(*files)))
 
     def _diff(self):
         return self.run('diff')
 
     def _pull(self):
-        return self.run('pull')
+        return self.run('update')
+
+    def _push(self):
+        return self.run('commit')
 
     def _status(self):
         return self.run('status')
 
     def _commit(self, message=None):
         if message:
-            return self.run('commit -m '+quote(message))
+            return self.run('commit --local -m {}'.format(quote(message)))
         else:
-            return self.run('commit')
-
-    def _check(self):
-        return self.run('check -v')
-
-    def _clean(self):
-        return self.run('clean-tree -v --force --detritus --unknown')
-
-    def _purge(self):
-        return self.run('clean-tree -v --force --detritus --unknown --ignored')
-
-    def _reset(self):
-        return self.run('revert -v')
-
-    def _export(self, directory):
-        return self.run('export -v --root={}'.format(quote(self.name)))
-
-    def _archive(self, directory):
-        return self.run('export -v --root={} {}.zip'.format(quote(self.name), quote(self.name)))
-
-
-class RepoDarcs(Repo):  # {{{1
-
-    dvcs_type = 'darcs'
-
-    def get_info(self, key):
-        for line in self.lines('info'):
-            if key+': ' in line:
-                return line.split(': ')[1]
-
-    def _url(self):
-        return self.get_info('parent branch')
-
-    def _latest(self):
-        return self.get('id -i')
-
-    def _init(self):
-        return self.run('init {}'.format(quote(self.directory)))
-
-    def _clone(self, url):
-        return self.run('get {} {}'.format(quote(url), quote(self.directory)))
-
-    def _add(self, *files):
-        return self.run('add {}'.format(' '.join([quote(f) for f in files])))
-
-    def _diff(self):
-        return self.run('diff')
-
-    def _status(self):
-        return self.run('whatsnew -s')
-
-    def _commit(self, message=None):
-        if message:
-            return self.run('commit -m '+quote(message))
-        else:
-            return self.run('commit')
+            return self.run('commit --local')
 
     def _check(self):
         return self.run('check -v')

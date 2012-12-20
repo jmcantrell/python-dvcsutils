@@ -1,5 +1,4 @@
-import os, shlex
-from pipes import quote
+import os, shlex, pipes
 from contextlib import contextmanager
 from subprocess import PIPE, Popen
 
@@ -55,4 +54,4 @@ def lines(cmd, **kwargs):
 
 
 def quote(*args):
-    return ' '.join([quote(a) for a in args])
+    return ' '.join([pipes.quote(a) for a in args])

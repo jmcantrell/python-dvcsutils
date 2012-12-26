@@ -31,6 +31,8 @@ def main():
         args.directory = os.getcwd()
     if args.recursive:
         for r in find(args.directory):
+            print(r.directory)
             process(r, args)
+            print('')
     else:
         process(load(args.directory), args)

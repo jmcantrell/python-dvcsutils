@@ -1,5 +1,5 @@
 import os
-from .core import dvcs_types, commands
+from .core import dvcs_types, commands, root
 from .utils import in_directory, quote, lines, get, run, AutoRegister
 
 
@@ -15,7 +15,7 @@ class Repo:  # {{{1
     dvcs_type = None
 
     def __init__(self, directory):
-        self.directory = directory
+        self.directory = root(directory)
         self.cmd = self.dvcs_type + ' {}'
 
     def lines(self, cmd):
@@ -35,7 +35,7 @@ class Repo:  # {{{1
     def detect(cls, directory):
         if not cls.dvcs_type:
             return False
-        return os.path.isdir(os.path.join(directory, '.'+cls.dvcs_type))
+        return os.path.isdir(os.path.join(directory, '.' + cls.dvcs_type))
 
     @classmethod
     def register_subclass(klass, cls):
@@ -49,6 +49,10 @@ class Repo:  # {{{1
     def get_latest(self):
         return self._latest()
 
+    @in_directory
+    def get_files(self):
+        return self._files()
+
     def get_origin(self):
         return self.dvcs_type + '+' + self.get_url()
 
@@ -59,6 +63,9 @@ class Repo:  # {{{1
         raise NotImplementedError
 
     def _latest(self):
+        raise NotImplementedError
+
+    def _files(self):
         raise NotImplementedError
 
     def _init(self):
@@ -119,14 +126,6 @@ class Repo:  # {{{1
             print(name)
 
     @command
-    def init(self):
-        return self._init()
-
-    @command
-    def clone(self, url):
-        return self._clone(url)
-
-    @command
     def origin(self):
         print(self.get_origin())
 
@@ -137,6 +136,23 @@ class Repo:  # {{{1
     @command
     def latest(self):
         print(self.get_latest())
+
+    @command
+    def root(self):
+        print(self.directory)
+
+    @command
+    def files(self):
+        for f in sorted(self.get_files()):
+            print(f)
+
+    @command
+    def init(self):
+        return self._init()
+
+    @command
+    def clone(self, url):
+        return self._clone(url)
 
     @command
     @in_directory
@@ -219,6 +235,10 @@ class RepoGit(Repo):  # {{{1
     def _latest(self):
         return self.get('rev-parse HEAD')
 
+    def _files(self):
+        for f in self.lines('ls-files'):
+            yield f
+
     def _init(self):
         return self.run('init {}'.format(quote(self.directory)))
 
@@ -286,6 +306,10 @@ class RepoMercurial(Repo):  # {{{1
     def _latest(self):
         return self.get('revno')
 
+    def _files(self):
+        for f in self.lines('locate'):
+            yield f
+
     def _init(self):
         return self.run('init {}'.format(quote(self.directory)))
 
@@ -349,7 +373,7 @@ class RepoBazaar(Repo):  # {{{1
 
     def get_info(self, key):
         for line in self.lines('info'):
-            if key+': ' in line:
+            if key + ': ' in line:
                 return line.split(': ')[1]
 
     def _url(self):
@@ -357,6 +381,10 @@ class RepoBazaar(Repo):  # {{{1
 
     def _latest(self):
         return self.get('id -i')
+
+    def _files(self):
+        for f in self.lines('ls -R'):
+            yield f
 
     def _init(self):
         return self.run('init {}'.format(quote(self.directory)))

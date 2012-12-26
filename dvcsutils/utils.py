@@ -53,7 +53,7 @@ def get(cmd):
 
 
 def lines(cmd):
-    return execute(cmd, stdout=PIPE)[1].split(os.linesep)
+    return [l for l in execute(cmd, stdout=PIPE)[1].split(os.linesep) if l]
 
 
 def quote(*args):

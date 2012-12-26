@@ -1,7 +1,7 @@
 import os
 
 dvcs_types = {}
-commands = []
+commands = ['commands']
 
 
 def detect(directory):

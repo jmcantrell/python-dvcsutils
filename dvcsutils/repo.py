@@ -121,11 +121,6 @@ class Repo:  # {{{1
     # Exposed to the CLI interface
 
     @command
-    def commands(self):
-        for name in sorted(commands):
-            print(name)
-
-    @command
     def origin(self):
         print(self.get_origin())
 

@@ -13,8 +13,12 @@ def parse_args():
 
 
 def process(r, args):
+    if args.command == 'commands':
+        for c in sorted(commands):
+            print(c)
+        return
     f = getattr(r, args.command)
-    if args.command in ('commit',):
+    if args.command == 'commit':
         f(*args.parameters, message=args.message)
     elif args.command in ('archive', 'export'):
         f(args.output_directory)

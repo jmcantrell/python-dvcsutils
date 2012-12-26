@@ -5,6 +5,7 @@ from .utils import in_directory, quote, lines, get, run, AutoRegister
 
 def command(f):
     commands.append(f.func_name)
+    return f
 
 
 class Repo:  # {{{1
@@ -114,8 +115,8 @@ class Repo:  # {{{1
 
     @command
     def commands(self):
-        for f in commands:
-            print(f.func_name)
+        for name in sorted(commands):
+            print(name)
 
     @command
     def init(self):

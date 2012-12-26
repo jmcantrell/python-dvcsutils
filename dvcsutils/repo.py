@@ -1,11 +1,10 @@
 import os
-from .core import actions, dvcs_types
+from .core import dvcs_types, commands
 from .utils import in_directory, quote, lines, get, run, AutoRegister
 
 
-def action(f):
-    actions[f.func_name] = f
-    return f
+def command(f):
+    commands.append(f.func_name)
 
 
 class Repo:  # {{{1
@@ -14,20 +13,18 @@ class Repo:  # {{{1
 
     dvcs_type = None
 
-    def __init__(self, directory=None):
-        self.directory = directory or os.getcwd()
+    def __init__(self, directory):
+        self.directory = directory
+        self.cmd = self.dvcs_type + ' {}'
 
-    def command(self, cmd):
-        return ' '.join([self.dvcs_type, cmd])
+    def lines(self, cmd):
+        return lines(self.cmd.format(cmd))
 
-    def lines(self, cmd, **kwargs):
-        return lines(self.command(cmd), **kwargs)
+    def get(self, cmd):
+        return get(self.cmd.format(cmd))
 
-    def get(self, cmd, **kwargs):
-        return get(self.command(cmd), **kwargs)
-
-    def run(self, cmd, **kwargs):
-        return run(self.command(cmd), **kwargs)
+    def run(self, cmd):
+        return run(self.cmd.format(cmd))
 
     @property
     def name(self):
@@ -45,16 +42,16 @@ class Repo:  # {{{1
 
     @in_directory
     def get_url(self):
-        raise NotImplementedError
+        return self._url()
 
     @in_directory
     def get_latest(self):
-        return NotImplementedError
+        return self._latest()
 
     def get_origin(self):
-        return '+'.join([self.dvcs_type, self.get_url()])
+        return self.dvcs_type + '+' + self.get_url()
 
-    # Internal actions {{{2
+    # Internal commands
     # Any Repo class should override these
 
     def _url(self):
@@ -72,10 +69,10 @@ class Repo:  # {{{1
     def _add(self, *files):
         raise NotImplementedError
 
-    def _rm(self, *files):
+    def _remove(self, *files):
         raise NotImplementedError
 
-    def _mv(self, *files):
+    def _move(self, *files):
         raise NotImplementedError
 
     def _diff(self):
@@ -111,101 +108,101 @@ class Repo:  # {{{1
     def _reset(self):
         raise NotImplementedError
 
-    # External actions {{{2
+    # External commands
     # Intended to be the API
     # Exposed to the CLI interface
 
-    @action
-    def actions(self):
-        for name in sorted(actions.keys()):
-            print(name)
+    @command
+    def commands(self):
+        for f in commands:
+            print(f.func_name)
 
-    @action
+    @command
     def init(self):
         return self._init()
 
-    @action
+    @command
     def clone(self, url):
         return self._clone(url)
 
-    @action
+    @command
     def origin(self):
         print(self.get_origin())
 
-    @action
+    @command
     def url(self):
         print(self.get_url())
 
-    @action
+    @command
     def latest(self):
         print(self.get_latest())
 
-    @action
+    @command
     @in_directory
     def add(self, *files):
         return self._add(*files)
 
-    @action
+    @command
     @in_directory
-    def rm(self, *files):
-        return self._rm(*files)
+    def remove(self, *files):
+        return self._remove(*files)
 
-    @action
+    @command
     @in_directory
-    def mv(self, *files):
-        return self._mv(*files)
+    def move(self, *files):
+        return self._move(*files)
 
-    @action
+    @command
     @in_directory
     def diff(self):
         return self._diff()
 
-    @action
+    @command
     @in_directory
     def pull(self):
         return self._pull()
 
-    @action
+    @command
     @in_directory
     def push(self):
         return self._push()
 
-    @action
+    @command
     @in_directory
     def commit(self, message=None):
         return self._commit(message)
 
-    @action
+    @command
     @in_directory
     def status(self):
         return self._status()
 
-    @action
+    @command
     @in_directory
     def export(self, directory):
         return self._export(directory)
 
-    @action
+    @command
     @in_directory
     def archive(self, directory):
         return self._archive(directory)
 
-    @action
+    @command
     @in_directory
     def check(self):
         return self._check()
 
-    @action
+    @command
     @in_directory
     def clean(self):
         return self._clean()
 
-    @action
+    @command
     @in_directory
     def purge(self):
         return self._purge()
 
-    @action
+    @command
     @in_directory
     def reset(self):
         return self._reset()
@@ -236,10 +233,10 @@ class RepoGit(Repo):  # {{{1
     def _diff(self):
         return self.run('diff')
 
-    def _mv(self, *files):
+    def _move(self, *files):
         return self.run('mv {}'.format(quote(*files)))
 
-    def _rm(self, *files):
+    def _remove(self, *files):
         return self.run('rm -f {}'.format(quote(*files)))
 
     def _pull(self):
@@ -300,10 +297,10 @@ class RepoMercurial(Repo):  # {{{1
     def _add(self, *files):
         return self.run('add {}'.format(quote(*files)))
 
-    def _mv(self, *files):
+    def _move(self, *files):
         return self.run('mv {}'.format(quote(*files)))
 
-    def _rm(self, *files):
+    def _remove(self, *files):
         return self.run('rm -f {}'.format(quote(*files)))
 
     def _diff(self):
@@ -369,10 +366,10 @@ class RepoBazaar(Repo):  # {{{1
     def _add(self, *files):
         return self.run('add {}'.format(quote(*files)))
 
-    def _mv(self, *files):
+    def _move(self, *files):
         return self.run('mv {}'.format(quote(*files)))
 
-    def _rm(self, *files):
+    def _remove(self, *files):
         return self.run('remove --force {}'.format(quote(*files)))
 
     def _diff(self):

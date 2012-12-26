@@ -1,36 +1,36 @@
-import os, sys, argparse
-from .core import actions, load, detect, find, root
-from .repo import Repo
+import os, argparse
+from .core import load, find, commands
 
 
-def get_arguments():
+def parse_args():
     parser = argparse.ArgumentParser(description='Abstract DVCS interface.')
-    parser.add_argument('action', metavar='ACTION', choices=actions.keys(), help='action(s) to perform')
-    parser.add_argument('parameters', nargs='*', metavar='PARAMETER', help='parameter(s) to pass to action')
+    parser.add_argument('command', metavar='command', choices=commands, help='command(s) to perform')
+    parser.add_argument('parameters', nargs='*', metavar='parameter', help='parameter(s) to pass to command')
     parser.add_argument('-d', '--directory', help='the working directory')
     parser.add_argument('-m', '--message', help='the commit message')
+    parser.add_argument('-r', '--recursive', action='store_true', help='use all repos under directory')
     return parser.parse_args()
 
 
-def main():
-    args = get_arguments()
+def process(r, args):
+    f = getattr(r, args.command)
+    if args.command in ('commit',):
+        f(*args.parameters, message=args.message)
+    elif args.command in ('archive', 'export'):
+        f(args.output_directory)
+    elif args.command in ('add', 'remove', 'move'):
+        f(*args.parameters)
+    else:
+        f()
 
+
+def main():
+    args = parse_args()
+    # If no directory was given, use CWD
     if not args.directory:
         args.directory = os.getcwd()
-
-    r = load(directory=args.directory)
-
-    status = 0
-
-    f = getattr(r, args.action)
-
-    if args.action in ('commit',):
-        status = f(*args.parameters, message=args.message)
-    elif args.action in ('archive', 'export'):
-        status = f(args.output_directory)
-    elif args.action in ('add', 'rm', 'mv'):
-        status = f(*args.parameters)
+    if args.recursive:
+        for r in find(args.directory):
+            process(r, args)
     else:
-        status = f()
-
-    sys.exit(status)
+        process(load(args.directory), args)

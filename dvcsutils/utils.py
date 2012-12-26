@@ -38,19 +38,22 @@ def split_command(cmd):
     return shlex.split(cmd)
 
 
-def run(cmd, **kwargs):
+def execute(cmd, **kwargs):
     p = Popen(split_command(cmd), **kwargs)
     o, e = p.communicate()
-    return p.returncode == 0
+    return p.returncode, o, e
 
 
-def get(cmd, **kwargs):
-    return lines(cmd, **kwargs)[0]
+def run(cmd):
+    return execute(cmd)[0] == 0
 
 
-def lines(cmd, **kwargs):
-    kwargs['stdout'] = PIPE
-    return run(cmd, **kwargs)[1].split(os.linesep)
+def get(cmd):
+    return lines(cmd)[0]
+
+
+def lines(cmd):
+    return execute(cmd, stdout=PIPE)[1].split(os.linesep)
 
 
 def quote(*args):

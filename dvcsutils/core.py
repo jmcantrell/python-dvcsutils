@@ -1,22 +1,22 @@
 dvcs_types = {}
-actions = {}
+commands = []
 
 import os
 from .repo import Repo
 
 
 def detect(directory):
-    for tclass in dvcs_types.values():
-        if tclass.detect(directory):
-            return tclass
+    for tcls in dvcs_types.values():
+        if tcls.detect(directory):
+            return tcls
 
 
 def load(directory, dvcs_type=None):
     repo_cls = detect(directory)
     if repo_cls:
-        return repo_cls(directory=directory)
+        return repo_cls(directory)
     if dvcs_type:
-        return dvcs_types[dvcs_type](directory=directory)
+        return dvcs_types[dvcs_type](directory)
 
 
 def find(directory):

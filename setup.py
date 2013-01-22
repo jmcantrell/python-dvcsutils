@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
         name='DVCSUtils',
-        version='0.0.5',
+        version='0.0.6',
         description='Work with major DVCS tools in the abstract.',
         author='Jeremy Cantrell',
         author_email='jmcantrell@gmail.com',
